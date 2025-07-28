@@ -5,40 +5,101 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Registered HustleLink Users</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .table-hover tbody tr:hover {
+      background-color: rgba(13, 110, 253, 0.1);
+    }
+    .table thead th {
+      background-color: #0d6efd;
+      color: white;
+      font-weight: 500;
+    }
+    .rounded-table {
+      border-radius: 0.5rem;
+      overflow: hidden;
+    }
+    .status-active {
+      color: #198754;
+      font-weight: 500;
+    }
+    .status-inactive {
+      color: #dc3545;
+      font-weight: 500;
+    }
+  </style>
 </head>
 <body class="bg-light">
   <div class="container py-5">
-    <h2 class="mb-4 text-primary">Registered HustleLink Users</h2>
-    <div class="table-responsive">
-      <table class="table table-striped table-bordered" id="dataTable">
-        <thead id="tableHead"></thead>
-        <tbody id="tableBody"></tbody>
-      </table>
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h2 class="mb-0">Registered HustleLink Users</h2>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered mb-0 rounded-table">
+            <thead id="tableHead" class="align-middle"></thead>
+            <tbody id="tableBody" class="align-middle"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-footer text-muted">
+        <small>Last updated: <span id="updateTime"></span></small>
+      </div>
     </div>
   </div>
 
   <script>
-        const sheetAPI = 'https://script.google.com/macros/s/AKfycbzt5q5HORvhEW15w4-VCRHaBSepCzm3jc6aXNJCK3WwgPzYKKiNChy9FfL7bkBpVnL7/exec';
-
+    const sheetAPI = 'https://script.google.com/macros/s/AKfycbzt5q5HORvhEW15w4-VCRHaBSepCzm3jc6aXNJCK3WwgPzYKKiNChy9FfL7bkBpVnL7/exec';
 
     fetch(sheetAPI)
       .then(res => res.json())
       .then(data => {
-        if (!data || !data.length) return;
+        if (!data || !data.length) {
+          document.getElementById('tableBody').innerHTML = `
+            <tr>
+              <td colspan="10" class="text-center py-4 text-muted">
+                <i class="bi bi-exclamation-circle"></i> No data available
+              </td>
+            </tr>`;
+          return;
+        }
 
         const headers = Object.keys(data[0]);
-        const headHTML = headers.map(h => `<th>${h}</th>`).join('');
+        const headHTML = headers.map(h => `<th class="text-nowrap">${h}</th>`).join('');
         document.getElementById('tableHead').innerHTML = `<tr>${headHTML}</tr>`;
 
         const bodyHTML = data.map(row => {
-          return `<tr>${headers.map(h => `<td>${row[h] || ''}</td>`).join('')}</tr>`;
+          return `<tr>${
+            headers.map(h => {
+              let cellContent = row[h] || '';
+              // Add special formatting for certain columns (example for Status column)
+              if (h.toLowerCase() === 'status') {
+                const statusClass = cellContent.toLowerCase() === 'active' ? 'status-active' : 'status-inactive';
+                cellContent = `<span class="${statusClass}">${cellContent}</span>`;
+              }
+              // Add text-truncate class to prevent long text from breaking layout
+              return `<td class="text-truncate" style="max-width: 200px;" title="${row[h] || ''}">${cellContent}</td>`;
+            }).join('')
+          }</tr>`;
         }).join('');
+        
         document.getElementById('tableBody').innerHTML = bodyHTML;
+        document.getElementById('updateTime').textContent = new Date().toLocaleString();
       })
       .catch(err => {
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="10">Failed to load data</td></tr>`;
+        document.getElementById('tableBody').innerHTML = `
+          <tr>
+            <td colspan="10" class="text-center py-4 text-danger">
+              <i class="bi bi-exclamation-triangle"></i> Failed to load data
+            </td>
+          </tr>`;
         console.error('Error:', err);
       });
   </script>
+  
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+  <!-- Bootstrap JS Bundle with Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
