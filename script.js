@@ -1,5 +1,4 @@
-// Replace this with your deployed Google Apps Script Web App URL
-const scriptURL = 'https://script.google.com/macros/s/AKfycbw2AZnFzDM3PiL8CyaAQt1-ZedFMjzrOahgFvW26AxHb21RcYlqUqfPXlqT2A-ahenf/exec';
+const scriptURL = 'https://script.google.com/macros/s/AKfycbxY3Be8inTxy96dumZT-OB-0-YMbk8Rm1NDLtpvaE41zy9xjLRkjp1r-ZcGQhsTQ8bw/exec';
 
 document.getElementById('userForm').addEventListener('submit', function(e) {
   e.preventDefault();
@@ -9,8 +8,10 @@ document.getElementById('userForm').addEventListener('submit', function(e) {
 
   fetch(scriptURL, { method: 'POST', body: data })
     .then(response => {
-      status.textContent = "✅ Successfully submitted!";
+      status.textContent = "✅ Submitted successfully!";
       form.reset();
+      document.getElementById("jobSeekerFields").classList.add("hidden");
+      document.getElementById("employerFields").classList.add("hidden");
     })
     .catch(error => {
       status.textContent = "❌ Submission failed.";
