@@ -88,117 +88,134 @@
   </div>
 
   <script>
-    const sheetAPI = 'https://script.google.com/macros/s/AKfycbzt5q5HORvhEW15w4-VCRHaBSepCzm3jc6aXNJCK3WwgPzYKKiNChy9FfL7bkBpVnL7/exec';
+ const sheetAPI = 'https://script.google.com/macros/s/AKfycbzt5q5HORvhEW15w4-VCRHaBSepCzm3jc6aXNJCK3WwgPzYKKiNChy9FfL7bkBpVnL7/exec';
 
-    // Format phone numbers
-    function formatPhone(phone) {
-      if (!phone) return '';
-      // Simple formatting - adjust as needed
-      return phone.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+// Format phone numbers
+function formatPhone(phone) {
+  if (!phone) return '';
+  // Simple formatting - adjust as needed
+  return phone.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+}
+
+// Create avatar from name
+function createAvatar(name) {
+  if (!name) return '';
+  const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
+  return `<div class="avatar bg-primary text-white d-flex align-items-center justify-content-center">${initials}</div>`;
+}
+
+// Show loading state
+document.getElementById('tableBody').innerHTML = `
+  <tr>
+    <td colspan="10" class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p class="mt-2">Loading users...</p>
+    </td>
+  </tr>`;
+
+fetch(sheetAPI)
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('API Response:', data); // Debugging
+    
+    // Handle case where API returns { success: true, data: [...] }
+    const users = data.data || data;
+    
+    if (!users || !users.length) {
+      document.getElementById('tableBody').innerHTML = `
+        <tr>
+          <td colspan="10" class="text-center py-4">
+            <div class="text-muted">
+              <i class="bi bi-people display-6"></i>
+              <p class="mt-2">No users found</p>
+            </div>
+          </td>
+        </tr>`;
+      return;
     }
 
-    // Format date
-    function formatDate(dateString) {
-      if (!dateString) return '';
-      const date = new Date(dateString);
-      return date.toLocaleDateString();
-    }
+    // Get headers from first user object
+    const headers = Object.keys(users[0]);
+    
+    // Customize headers for better display
+    const displayHeaders = headers.map(h => {
+      const headerMap = {
+        'name': 'User',
+        'phone': 'Phone',
+        'email': 'Email',
+        'userType': 'Type',
+        'location': 'Location',
+        'profession': 'Profession',
+        'experience': 'Experience'
+      };
+      return headerMap[h] || h;
+    });
 
-    // Create avatar from name
-    function createAvatar(name) {
-      if (!name) return '';
-      const initials = name.split(' ').map(n => n[0]).join('').toUpperCase();
-      return `<div class="avatar bg-primary text-white d-flex align-items-center justify-content-center">${initials}</div>`;
-    }
+    const headHTML = displayHeaders.map(h => `<th>${h}</th>`).join('');
+    document.getElementById('tableHead').innerHTML = headHTML;
 
-    fetch(sheetAPI)
-      .then(res => res.json())
-      .then(data => {
-        if (!data || !data.length) {
-          document.getElementById('tableBody').innerHTML = `
-            <tr>
-              <td colspan="10" class="text-center py-4">
-                <div class="text-muted">
-                  <i class="bi bi-people display-6"></i>
-                  <p class="mt-2">No users found</p>
-                </div>
-              </td>
-            </tr>`;
-          return;
-        }
-
-        const headers = Object.keys(data[0]);
-        // Customize headers for better display
-        const displayHeaders = headers.map(h => {
-          const headerMap = {
-            'name': 'User',
-            'phone': 'Phone',
-            'email': 'Email',
-            'userType': 'Type',
-            'location': 'Location',
-            'profession': 'Profession',
-            'experience': 'Experience'
-          };
-          return headerMap[h] || h;
-        });
-
-        const headHTML = displayHeaders.map(h => `<th>${h}</th>`).join('');
-        document.getElementById('tableHead').innerHTML = headHTML;
-
-        const bodyHTML = data.map(row => {
-          return `
-            <tr class="user-card">
-              <td>
-                <div class="d-flex align-items-center">
-                  ${createAvatar(row.name || '')}
-                  <div class="ms-3">
-                    <div class="fw-bold">${row.name || 'N/A'}</div>
-                    <div class="text-muted small">${row.email || ''}</div>
-                  </div>
-                </div>
-              </td>
-              <td>${formatPhone(row.phone)}</td>
-              <td>
-                <span class="badge ${row.userType === 'Job Seeker' ? 'badge-job-seeker' : 'badge-employer'}">
-                  ${row.userType || 'Unknown'}
-                </span>
-              </td>
-              <td>${row.location || 'N/A'}</td>
-              <td>${row.profession || 'N/A'}</td>
-              <td>${row.experience ? `${row.experience} yrs` : 'N/A'}</td>
-              <td>
-                <div class="dropdown">
-                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                    <i class="bi bi-gear"></i>
-                  </button>
-                  <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="bi bi-pencil me-2"></i>Edit</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Delete</a></li>
-                  </ul>
-                </div>
-              </td>
-            </tr>`;
-        }).join('');
-        
-        document.getElementById('tableBody').innerHTML = bodyHTML;
-        document.getElementById('showingCount').textContent = data.length;
-        document.getElementById('totalCount').textContent = data.length;
-      })
-      .catch(err => {
-        document.getElementById('tableBody').innerHTML = `
-          <tr>
-            <td colspan="10" class="text-center py-4 text-danger">
-              <i class="bi bi-exclamation-triangle-fill display-6"></i>
-              <p class="mt-2">Failed to load data. Please try again later.</p>
-              <button class="btn btn-sm btn-outline-primary mt-2" onclick="window.location.reload()">
-                <i class="bi bi-arrow-clockwise"></i> Retry
+    const bodyHTML = users.map(user => {
+      return `
+        <tr class="user-card">
+          <td>
+            <div class="d-flex align-items-center">
+              ${createAvatar(user.name || '')}
+              <div class="ms-3">
+                <div class="fw-bold">${user.name || 'N/A'}</div>
+                <div class="text-muted small">${user.email || ''}</div>
+              </div>
+            </div>
+          </td>
+          <td>${formatPhone(user.phone)}</td>
+          <td>
+            <span class="badge ${user.userType === 'Job Seeker' ? 'badge-job-seeker' : 'badge-employer'}">
+              ${user.userType || 'Unknown'}
+            </span>
+          </td>
+          <td>${user.location || 'N/A'}</td>
+          <td>${user.profession || 'N/A'}</td>
+          <td>${user.experience ? `${user.experience} yrs` : 'N/A'}</td>
+          <td>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-gear"></i>
               </button>
-            </td>
-          </tr>`;
-        console.error('Error:', err);
-      });
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#"><i class="bi bi-eye me-2"></i>View</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="#"><i class="bi bi-trash me-2"></i>Delete</a></li>
+              </ul>
+            </div>
+          </td>
+        </tr>`;
+    }).join('');
+    
+    document.getElementById('tableBody').innerHTML = bodyHTML;
+    document.getElementById('showingCount').textContent = users.length;
+    document.getElementById('totalCount').textContent = users.length;
+  })
+  .catch(err => {
+    console.error('Error fetching data:', err);
+    document.getElementById('tableBody').innerHTML = `
+      <tr>
+        <td colspan="10" class="text-center py-4 text-danger">
+          <i class="bi bi-exclamation-triangle-fill display-6"></i>
+          <p class="mt-2">Failed to load data</p>
+          <p class="small text-muted">${err.message}</p>
+          <button class="btn btn-sm btn-outline-primary mt-2" onclick="window.location.reload()">
+            <i class="bi bi-arrow-clockwise"></i> Retry
+          </button>
+        </td>
+      </tr>`;
+  });
   </script>
   
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
