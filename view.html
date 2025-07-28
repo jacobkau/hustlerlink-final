@@ -125,7 +125,7 @@ fetch(sheetAPI)
   .then(data => {
     console.log('API Response:', data); // Debugging
     
-    // Handle case where API returns { success: true, data: [...] }
+    // Handle the API response structure
     const users = data.data || data;
     
     if (!users || !users.length) {
@@ -141,26 +141,29 @@ fetch(sheetAPI)
       return;
     }
 
-    // Get headers from first user object
-    const headers = Object.keys(users[0]);
-    
-    // Customize headers for better display
-    const displayHeaders = headers.map(h => {
-      const headerMap = {
-        'name': 'User',
-        'phone': 'Phone',
-        'email': 'Email',
-        'userType': 'Type',
-        'location': 'Location',
-        'profession': 'Profession',
-        'experience': 'Experience'
-      };
-      return headerMap[h] || h;
-    });
+    // Define which fields to display in the table
+    const fieldsToDisplay = [
+      'name', 'phone', 'email', 'userType', 
+      'location', 'profession', 'experience'
+    ];
 
-    const headHTML = displayHeaders.map(h => `<th>${h}</th>`).join('');
-    document.getElementById('tableHead').innerHTML = headHTML;
+    // Create table headers
+    const headerMap = {
+      'name': 'User',
+      'phone': 'Phone',
+      'email': 'Email',
+      'userType': 'Type',
+      'location': 'Location',
+      'profession': 'Profession',
+      'experience': 'Experience'
+    };
 
+    const headHTML = fieldsToDisplay.map(field => 
+      `<th>${headerMap[field] || field}</th>`
+    ).join('');
+    document.getElementById('tableHead').innerHTML = headHTML + '<th>Actions</th>';
+
+    // Create table rows
     const bodyHTML = users.map(user => {
       return `
         <tr class="user-card">
