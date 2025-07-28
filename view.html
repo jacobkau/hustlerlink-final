@@ -58,6 +58,14 @@
     .error-message {
       padding: 2rem 0;
     }
+    
+    .export-btn {
+      transition: all 0.2s ease;
+    }
+    
+    .export-btn:hover {
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
@@ -68,7 +76,12 @@
           <h2 class="h4 mb-0">
             <i class="bi bi-people-fill me-2"></i>Registered Users
           </h2>
-          <span id="recordCount" class="badge bg-white text-primary"></span>
+          <div>
+            <span id="recordCount" class="badge bg-white text-primary me-2"></span>
+            <button id="exportBtn" class="btn btn-sm btn-light export-btn" title="Export to CSV">
+              <i class="bi bi-download me-1"></i>Export
+            </button>
+          </div>
         </div>
       </div>
       
@@ -108,20 +121,28 @@
         retryDelay: 1000
       };
       
+      // Cache DOM elements
       const elements = {
         tableHead: document.getElementById('tableHead'),
         tableBody: document.getElementById('tableBody'),
         updateTime: document.getElementById('updateTime'),
         recordCount: document.getElementById('recordCount'),
-        dataStatus: document.getElementById('dataStatus')
+        dataStatus: document.getElementById('dataStatus'),
+        exportBtn: document.getElementById('exportBtn')
       };
       
+      // Store the current data for export
+      let currentData = [];
+      let currentHeaders = [];
+      
+      // Update timestamp display
       function updateTimestamp() {
         const now = new Date();
         elements.updateTime.textContent = now.toLocaleString();
         return now;
       }
       
+      // Display error message
       function renderError(message) {
         elements.tableBody.innerHTML = `
           <tr>
@@ -134,6 +155,7 @@
         elements.dataStatus.className = 'badge text-bg-danger';
       }
       
+      // Display no data message
       function renderNoData() {
         elements.tableBody.innerHTML = `
           <tr>
@@ -147,21 +169,59 @@
         elements.dataStatus.className = 'badge text-bg-warning';
       }
       
+      // Convert array to CSV format
+      function arrayToCSV(data, headers) {
+        const headerRow = headers.join(',');
+        const dataRows = data.map(row => 
+          headers.map(header => {
+            // Escape quotes and wrap in quotes if contains commas
+            let value = row[header] || '';
+            value = String(value).replace(/"/g, '""');
+            return value.includes(',') ? `"${value}"` : value;
+          }).join(',')
+        );
+        return [headerRow, ...dataRows].join('\n');
+      }
+      
+      // Download CSV file
+      function downloadCSV() {
+        if (!currentData.length) {
+          alert('No data available to export');
+          return;
+        }
+        
+        const csvContent = arrayToCSV(currentData, currentHeaders);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `hustlelink-users-${timestamp}.csv`;
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      // Render the data table
       function renderTable(data) {
         if (!data || !data.length) {
           renderNoData();
           return;
         }
         
-        const headers = Object.keys(data[0]);
-        const headerHTML = headers.map(h => 
+        currentData = data;
+        currentHeaders = Object.keys(data[0]);
+        
+        const headerHTML = currentHeaders.map(h => 
           `<th class="text-nowrap">${h.replace(/_/g, ' ')}</th>`
         ).join('');
         
         elements.tableHead.innerHTML = `<tr><th class="serial-column">#</th>${headerHTML}</tr>`;
         
         const bodyHTML = data.map((row, index) => {
-          const cells = headers.map(h => {
+          const cells = currentHeaders.map(h => {
             let content = row[h] || '';
             
             // Special formatting for status fields
@@ -187,6 +247,7 @@
         elements.dataStatus.className = 'badge text-bg-success';
       }
       
+      // Fetch data from API
       async function fetchData(retryCount = 0) {
         try {
           const response = await fetch(config.apiEndpoint);
@@ -211,14 +272,23 @@
         }
       }
       
-      // Initial load
-      updateTimestamp();
-      elements.dataStatus.textContent = 'Loading...';
-      elements.dataStatus.className = 'badge text-bg-secondary';
-      fetchData();
+      // Initialize the application
+      function init() {
+        updateTimestamp();
+        elements.dataStatus.textContent = 'Loading...';
+        elements.dataStatus.className = 'badge text-bg-secondary';
+        
+        // Set up event listeners
+        elements.exportBtn.addEventListener('click', downloadCSV);
+        
+        // Initial data load
+        fetchData();
+        
+        // Refresh data every 5 minutes
+        setInterval(fetchData, 300000);
+      }
       
-      // Refresh data every 5 minutes
-      setInterval(fetchData, 300000);
+      init();
     });
   </script>
   
